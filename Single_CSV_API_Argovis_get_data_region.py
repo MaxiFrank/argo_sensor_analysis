@@ -2,13 +2,13 @@
 
 # libraries to call for all python API calls on Argovis
 
+import numpy as np
 import requests
 import pandas as pd
 import os
 from datetime import datetime, timedelta
 import pickle
 # from netCDF4 import Dataset as netcdf_dataset
-# import numpy as np
 # from scipy.interpolate import griddata
 # from datetime import datetime
 # import pdb
@@ -49,6 +49,7 @@ def parse_into_df(profiles,df):
             profileDf['date'] = profile['date']
             df = pd.concat([df, profileDf], sort=False)
     df = df[['profile_id', 'pres', 'temp', 'lat', 'lon', 'psal', 'date']]
+    df.fillna(value='NULL', inplace=True)
     return df
 
 
@@ -74,6 +75,9 @@ shape = f'[[[{130},{-50}],[{115},{13}],[{120},{50}],[{-125},{50}],' \
 presRange='[0,1000]'
 baseDir = os.getcwd()
 savefilename = os.path.join(baseDir, 'argo_data' + '.csv')
+if not os.path.exists(savefilename):
+    with open(savefilename, 'w'):
+        pass
 picklename = os.path.join(baseDir, 'argo_urls' + '.pkl')
 pkl_bool = check_pkl(picklename)
 current_urls = set()
@@ -87,10 +91,7 @@ if pkl_bool:
 
 # Main loop at appends data to .csv and seen urls to .pkl file
 for ii in range(490):
-
-    # Make sure we don't exceed 5GB .csv output file
-    if os.path.getsize(savefilename) / 1_000_000 >= 4750:
-        break
+# for ii in range(2):
 
     startDate = (earliest + timedelta(days = ii))
     endDate = (startDate + timedelta(days = 1))
@@ -98,6 +99,7 @@ for ii in range(490):
     endDate = str(endDate)
 
     url = get_url(startDate, endDate, shape, presRange)
+    # print(url)
     short_url = url.split('presRange')[0][0:-1]
     current_urls.add(short_url)
 
@@ -123,7 +125,7 @@ for ii in range(490):
     else:
         print('Returned empty')
 
-    selectionDf.to_csv(savefilename, mode='a', header=bool_val)
+    selectionDf.to_csv(savefilename, mode='a', header=bool_val, index=None)
     bool_val = False
     del selectionDf
 
@@ -137,9 +139,7 @@ for ii in range(490):
             with open(picklename, "wb") as output_file:
                 pickle.dump(all_urls, output_file)
 
-
 print('----------------------------------------------------------------')
 if pkl_bool:
     if current_urls == past_urls:
         print('No new URLs were found')
-
