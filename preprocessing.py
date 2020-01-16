@@ -82,29 +82,30 @@ def preprocessing(df):
     #INTERPOLATION
 
     #Create vector mapping correspoding temperatures with pressures
-    argo_df_listed = argo_df.select('profile_id', array(argo_df['temp'], argo_df['pres']).alias('temp_pres'))\
-                        .groupBy('profile_id').agg(collect_list('temp_pres').alias('temp_pres_list'))
+    argo_df_listed = argo_df.select('profile_id', 'lat', 'lon', array(argo_df['temp'], argo_df['pres']).alias('temp_pres'))\
+                        .groupBy('profile_id').agg(collect_list('temp_pres').alias('temp_pres_list'), 
+                                                   fn.min(argo_df['lat']).alias('lat'),
+                                                   fn.min(argo_df['lon']).alias('lon'))
 
     # Ordering by pressure
-    argo_df_listed = argo_df_listed.select('profile_id', 
+    argo_df_listed = argo_df_listed.select('profile_id', 'lat', 'lon',
                                        insane_sort(argo_df_listed['temp_pres_list']).alias('temp_pres_list'))
     
     # Interpolating missing temps at specified grid points
-    pres = argo_df_listed.select('profile_id',interp_udf('temp_pres_list').alias('temp_interp'))
+    pres = argo_df_listed.select('profile_id', 'lat', 'lon', interp_udf('temp_pres_list').alias('temp_interp'))
 
     # Finding profiles with temps as nans
-    check_pres = pres.select("profile_id", "temp_interp", 
+    check_pres = pres.select("profile_id", "temp_interp", 'lat', 'lon',
                          null_udf("temp_interp").alias("temp_interp_hasNA"),
                          lenarray_udf("temp_interp").alias("temp_interp_len199"))
     
     # Filtering profiles with temps as nans
-    filtered_pres = check_pres.filter("temp_interp_hasNA == False").select("profile_id","temp_interp")
+    filtered_pres = check_pres.filter("temp_interp_hasNA == False").select("profile_id","temp_interp", 'lat', 'lon')
     
     # Finding profiles with temps < -5
-    check_pres = pres.select("profile_id", "temp_interp", 
+    check_pres = pres.select("profile_id", "temp_interp", 'lat', 'lon',
                          neg_udf("temp_interp").alias("temp_interp_hasNeg5s"))
-                         
     # Filtering profiles with temps < -5
-    argo_df_clean = check_pres.filter("temp_interp_hasNeg5s == False").select("profile_id","temp_interp")
-
+    argo_df_clean = check_pres.filter("temp_interp_hasNeg5s == False").select("profile_id","temp_interp",'lat', 'lon')
+    
     return argo_df_clean
