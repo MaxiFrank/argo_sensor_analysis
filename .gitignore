@@ -1,3 +1,8 @@
+preprocessed/
+data/argo_data.csv
+data/digit-recognizer
+argo_urls.pkl
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
