@@ -2,6 +2,9 @@ preprocessed/
 data/argo_data.csv
 data/digit-recognizer
 argo_urls.pkl
+settings.json
+Spark_Spectral_Clustering.ipynb
+clusters.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
