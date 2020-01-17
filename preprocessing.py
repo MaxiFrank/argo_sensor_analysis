@@ -4,13 +4,18 @@ from datetime import datetime
 import dateutil
 import pyspark.sql.functions as fn
 from pyspark import SparkConf, SparkContext
-from pyspark.ml.feature import Bucketizer, StringIndexer, VectorAssembler
+from pyspark.ml.feature import Bucketizer, StringIndexer, VectorAssembler, PCA
 from pyspark.sql import Row, SparkSession, SQLContext, Window
+from pyspark.ml.linalg import Vectors,  VectorUDT
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from scipy import interpolate
 import numpy as np
 import math
+
+def toVector(array):
+    return Vectors.dense(array)
+toVector_udf = udf(toVector,VectorUDT())
 
 def interp(array):
     pres_grid = np.arange(5,1000,5)
@@ -51,7 +56,7 @@ neg_udf = udf(udf_less_than_neg5)
 insane_sort = udf(lambda x: [item for item in sorted(
         x, key=lambda x: x[1])], ArrayType(ArrayType(DoubleType())))
 
-def preprocessing(df):
+def preprocessing(df,num_pca=10):
     argo_df_og = df
 
     # Cast temp as DoubleType()
@@ -107,12 +112,12 @@ def preprocessing(df):
                          neg_udf("temp_interp").alias("temp_interp_hasNeg5s"))
     # Filtering profiles with temps < -5
     argo_df_clean = check_pres.filter("temp_interp_hasNeg5s == False").select("profile_id","temp_interp",'lat', 'lon')
-    
+
     argo_df_clean = argo_df_clean.select('profile_id',
                                          toVector_udf(argo_df_clean['temp_interp']).alias('features'),
                                          'lat', 'lon')
 
-    pca = PCA(k=10, inputCol='features', outputCol='features_pca').fit(argo_df_clean)
+    pca = PCA(k=num_pca, inputCol='features', outputCol='features_pca').fit(argo_df_clean)
     argo_df_clean = pca.transform(argo_df_clean)
     argo_df_clean = argo_df_clean.select('profile_id',
                                          argo_df_clean['features_pca'].alias('features'),
