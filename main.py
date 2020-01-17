@@ -12,19 +12,22 @@ import argparse
 
 parser = argparse.ArgumentParser('Cluster')
 parser.add_argument('path', type=str,
-                   help='path to saved data')
+                   help='path to raw data')
 parser.add_argument('algorithm',type=str,
                     help='clustering algorithm to run. Choose from ["kmeans","lda","spectral","gmm"]')
+parser.add_argument('outpath',type=str,
+                    help = 'output path for results as csv')
 parser.add_argument("--num_nodes",type=int,default=8,
-                    help='number of nodes in your cluster')
-parser.add_argument("--k_clusters","-k", type=int,default=8, help="number of clusters")
-parser.add_argument("--num_pca_features",'-p',type=int,default=8,help='number of pca features to use')
+                    help='number of nodes in your cluster. Default: 8')
+parser.add_argument("--k_clusters","-k", type=int,default=8, help="number of clusters. Default: 8")
+parser.add_argument("--num_pca_features",'-p',type=int,default=8,help='number of pca features to use. Default 8')
 args = parser.parse_args()
 
 path = args.path
 algorithm = args.algorithm
 num_pca_features = args.num_pca_features
 num_nodes = args.num_nodes
+outpath = args.outpath
 k = args.k_clusters
 
 
@@ -54,4 +57,4 @@ elif algorithm == 'gmm':
 
 predictions.select([col for col in predictions.columns if col != 'features'])\
            .toPandas()\
-           .to_csv("clusters.csv")
+           .to_csv(outpath)
