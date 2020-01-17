@@ -69,18 +69,24 @@ class SpectralClustering():
         knn_grouped = knn.groupBy('left_id').agg(f.collect_list('right_id').alias('nn'))
         
         # generate laplacian
-        laplacian = knn_grouped.select('left_id', laplacian_vector_udf(knn_grouped['left_id'], knn_grouped['nn'], 
-                                                                       lit(n), lit(self.k_nearest)).alias('lap_vector'))
+        laplacian = knn_grouped.select(knn_grouped['left_id'].alias('id'), 
+                                      toVector_udf(laplacian_vector_udf(knn_grouped['left_id'], 
+                                                           knn_grouped['nn'], 
+                                                            lit(n), 
+                                                            lit(self.k_nearest))).alias('lap_vector'))
 
-        laplacian_matrix = RowMatrix(laplacian.select('lap_vector').rdd.map(lambda x:x[0]))
-        eigenvectors = laplacian_matrix.computePrincipalComponents(k=self.num_eigenvectors)
+        pca = PCA(k=self.num_eigenvectors, inputCol='lap_vector', outputCol='features').fit(laplacian)
+        eigenvectors = pca.transform(laplacian).select('id','features')
+
+        # laplacian_matrix = RowMatrix(laplacian.select('lap_vector').rdd.map(lambda x:x[0]))
+        # eigenvectors = laplacian_matrix.computePrincipalComponents(k=self.num_eigenvectors)
         
-        eigenvectors = [(idx,Vectors.dense([float(item) for item in row])) 
-                        for idx, row in enumerate(eigenvectors.toArray().tolist())]
+        # eigenvectors = [(idx,Vectors.dense([float(item) for item in row])) 
+        #                 for idx, row in enumerate(eigenvectors.toArray().tolist())]
         
-        eigen_df = session.createDataFrame(eigenvectors,['id',self.featureCol])
-        model = KMeans(featuresCol=self.featureCol,predictionCol=self.predictionCol,k=self.k).fit(eigen_df)
-        predictions = model.transform(eigen_df).join(df_index,on='id')
+        # eigen_df = session.createDataFrame(eigenvectors,['id',self.featureCol])
+        model = KMeans(featuresCol='features',predictionCol=self.predictionCol,k=self.k).fit(eigenvectors)
+        predictions = model.transform(eigenvectors).join(df_index,on='id')
         return predictions
 
 
@@ -99,7 +105,7 @@ cosine_similarity_udf = udf(cosine_similarity, t.DoubleType())
 laplacian_vector_udf = udf(laplacian_vector, t.ArrayType(t.IntegerType()))
 
 def toVector(array):
-    return Vectors.dense(array)
+    return Vectors.dense([float(item) for item in array])
 toVector_udf = udf(toVector,VectorUDT())
 
 def interp(array):
