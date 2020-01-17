@@ -13,7 +13,7 @@ import argparse
 import sys
 from datetime import datetime
 
-import dateutil
+#import dateutil
 import pyspark.sql.functions as fn
 from pyspark import SparkConf, SparkContext
 from pyspark.ml.feature import Bucketizer, StringIndexer, VectorAssembler, PCA
