@@ -78,13 +78,6 @@ class SpectralClustering():
         pca = PCA(k=self.num_eigenvectors, inputCol='lap_vector', outputCol='features').fit(laplacian)
         eigenvectors = pca.transform(laplacian).select('id','features')
 
-        # laplacian_matrix = RowMatrix(laplacian.select('lap_vector').rdd.map(lambda x:x[0]))
-        # eigenvectors = laplacian_matrix.computePrincipalComponents(k=self.num_eigenvectors)
-        
-        # eigenvectors = [(idx,Vectors.dense([float(item) for item in row])) 
-        #                 for idx, row in enumerate(eigenvectors.toArray().tolist())]
-        
-        # eigen_df = session.createDataFrame(eigenvectors,['id',self.featureCol])
         model = KMeans(featuresCol='features',predictionCol=self.predictionCol,k=self.k).fit(eigenvectors)
         predictions = model.transform(eigenvectors).join(df_index,on='id')
         return predictions
