@@ -108,7 +108,7 @@ def preprocessing(df,num_pca=10):
     filtered_pres = check_pres.filter("temp_interp_hasNA == False").select("profile_id","temp_interp", 'lat', 'lon')
     
     # Finding profiles with temps < -5
-    check_pres = pres.select("profile_id", "temp_interp", 'lat', 'lon',
+    check_pres = filtered_pres.select("profile_id", "temp_interp", 'lat', 'lon',
                          neg_udf("temp_interp").alias("temp_interp_hasNeg5s"))
     # Filtering profiles with temps < -5
     argo_df_clean = check_pres.filter("temp_interp_hasNeg5s == False").select("profile_id","temp_interp",'lat', 'lon')
