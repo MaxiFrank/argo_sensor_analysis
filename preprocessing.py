@@ -108,4 +108,14 @@ def preprocessing(df):
     # Filtering profiles with temps < -5
     argo_df_clean = check_pres.filter("temp_interp_hasNeg5s == False").select("profile_id","temp_interp",'lat', 'lon')
     
+    argo_df_clean = argo_df_clean.select('profile_id',
+                                         toVector_udf(argo_df_clean['temp_interp']).alias('features'),
+                                         'lat', 'lon')
+
+    pca = PCA(k=10, inputCol='features', outputCol='features_pca').fit(argo_df_clean)
+    argo_df_clean = pca.transform(argo_df_clean)
+    argo_df_clean = argo_df_clean.select('profile_id',
+                                         argo_df_clean['features_pca'].alias('features'),
+                                         'lat', 'lon')
+    
     return argo_df_clean
